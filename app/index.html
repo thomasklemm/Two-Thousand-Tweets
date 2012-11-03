@@ -5,15 +5,19 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 
-  <title></title>
-  <meta name="description" content="">
-  <meta name="author" content="">
+  <title>EmberTweets</title>
+  <meta name="description" content="An Ember.js application displaying Twitter search results in a Graph using Morris.js.">
+  <meta name="author" content="Thomas Klemm">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!--   <link rel="shortcut icon" href="/favicon.ico">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png"> -->
+  <!-- Icons -->
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+  <!-- Stylesheets -->
   <link rel="stylesheet" href="styles/foundation.min.css">
+  <link rel="stylesheet" href="styles/chosen.css">
   <link rel="stylesheet" href="styles/style.css">
 
   <!--[if lt IE 9]>
@@ -27,22 +31,35 @@
     <div class="twelve columns">
 
       <div class="panel radius">
+        <!-- Headline for chart -->
         <script type="text/x-handlebars">
-          <div><h5 class='nomarg nopad'>Tweets {{#if TS.tweetsC.query}}<small>for "{{TS.tweetsC.query}}"</small>{{/if}}</h5></div>
+          <div><h5 class='nomarg nopad'>Tweets {{#if TS.stats.query}}<small>for "{{TS.stats.query}}"</small>{{/if}}</h5></div>
         </script>
 
+        <!-- Chart -->
         <div id="chart"></div>
 
         <script type="text/x-handlebars">
-          {{view Ember.Select
-                 contentBinding="TS.chartsC.content"
-                 optionValuePath="content.id"
-                 optionLabelPath="content.label"
-                 selectionBinding="TS.chartsC.selectedChart" }}
+          <!-- One Glance Stats -->
+          {{#if TS.tweetsC.tweetsCount}}
+            <div>
+              <span><b>Tweets for "{{TS.stats.query}}" from {{TS.stats.oldest}}</b> &middot; ({{TS.stats.oldest_time}}) &middot; <b>up to {{TS.stats.newest}} </b> &middot; ({{TS.stats.newest_time}})</span>
+            </div>
+          {{else}}
+            <div>&nbsp;</div>
+          {{/if}}
 
-          <div class="left"><b>Oldest Tweet: {{TS.stats.oldest_time}}</b> &middot; {{TS.stats.oldest}}</div>
-          <div class="right"><b>Newest Tweet: {{TS.stats.newest_time}}</b> &middot; {{TS.stats.newest}}</div>
-          <div></div>
+          <!-- Time Section Select -->
+          <div class="chart_select_wrap">
+            <b>Time Sections: &nbsp;</b>
+            {{view Ember.Select
+                   contentBinding="TS.chartsC.content"
+                   optionValuePath="content.id"
+                   optionLabelPath="content.label"
+                   selectionBinding="TS.chartsC.selectedChart"
+                   id ="chart_select" }}
+            <b>&nbsp; &larr; Give it a try!</b>
+          </div>
         </script>
       </div>
 
@@ -56,22 +73,33 @@
 
       <!-- Input -->
       <script type="text/x-handlebars">
-        <form>
-          {{view TS.SearchField placeholder="Search Twitter for #sandy, @dhh, 37signals..." id="searchfield" valueBinding="TS.tweetsC.query"}}
-          <button {{action "search" target="TS.tweetsC"}} class="button radius" id="searchbutton">Search Twitter</button>
-        </form>
+        <div>
+          <form>
+            <!-- Searchfield -->
+            {{view TS.SearchField placeholder="Search Twitter for #sandy, @dhh, 37signals..." id="searchfield" valueBinding="TS.tweetsC.query"}}
+
+            <!-- Search and Stop Buttons -->
+            {{#unless TS.stats.running}}
+              <!-- Search Button -->
+              <button {{action "search" target="TS.tweetsC"}} class="button radius" id="searchbutton">Search Twitter</button>
+            {{else}}
+              <!-- Stop BUtton -->
+              <button {{action "cancelSearch" target="TS.tweetsC"}} class="alert button radius" id="searchbutton">Stop</button>
+            {{/unless}}
+          </form>
+        </div>
       </script>
 
       <!-- Tweets -->
       <script type="text/x-handlebars">
         <div id="tweets" class="panel radius">
-          <h4 class="nopad nomarg">Recent Tweets {{#if TS.tweetsC.query}}<small>for "{{TS.tweetsC.query}}"</small>{{/if}}</h4>
+          <h4 class="nopad nomarg">Recent Tweets {{#if TS.stats.query}}<small>for "{{TS.stats.query}}"</small>{{/if}}</h4>
 
           {{#each TS.tweetsC}}
             <div class="tweet">
               <img  class='avatar' {{bindAttr src="image_url"}} width="48" height="48" />
               <span class='name'>{{name}}</span>
-              <span class='login'>({{login}})</span>
+              <span class='login'>(@{{login}})</span>
               <span class='timeago'>{{timeago}}</span>
               <span class='text'>{{text}}</span>
             </div>
@@ -85,7 +113,6 @@
 
     </div>
 
-    <!--               <img  class='avatar lazy' src="https://twitter.com/images/resources/twitter-bird-blue-on-white.png" {{bindAttr data-original="image_url"}} width="48" height="48" /> -->
 
     <!-- Stats -->
     <div class="four columns">
@@ -96,12 +123,14 @@
           <p></p>
 
           <ul class='disc'>
+            <!-- Stats Quick Glance -->
             <li>
               <b>{{TS.tweetsC.tweetsCount}} Tweets</b><br />
               from <b>{{TS.stats.oldest}}</b><br />
               to <b>{{TS.stats.newest}}</b>
             </li>
 
+            <!-- Averages -->
             <li>
               Average Number of Tweets
               <ul class='square'>
@@ -132,18 +161,27 @@
   <!-- Fork me Ribbon -->
   <a href="https://github.com/thomasklemm/recentTweets"><img style="position: absolute; top: -16px; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
 
+  <!-- Javascripts -->
 
+  <!-- jQuery -->
   <!-- The missing protocol means that it will match the current protocol, either http or https. If running locally, we use the local jQuery. -->
-  <script src="scripts/libs/datetoiso8601.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
   <script>window.jQuery || document.write('<script src="scripts/libs/jquery-1.7.2.min.js"><\/script>')</script>
+
+  <!-- Moment.js: Date Parsing and Formatting -->
   <script src="scripts/libs/moment.js"></script>
-  <script src="scripts/libs/lazyload.js"></script>
-  <!-- <script src="scripts/libs/timeago.js"></script> -->
+  <!-- Chosen: Great Select Boxes -->
+  <script src="scripts/libs/chosen.jquery.js"></script>
+
+  <!-- Ember.js: Client-side MVC Framework -->
   <script src="scripts/libs/handlebars-1.0.0.beta.6.js"></script>
   <script src="scripts/libs/ember-1.0.pre.js"></script>
+
+  <!-- Morris.js: Time-Series Graphing -->
   <script src="scripts/libs/raphael.js"></script>
   <script src="scripts/libs/morris.js"></script>
+
+  <!-- App -->
   <script src="scripts/app.js"></script>
 </body>
 </html>

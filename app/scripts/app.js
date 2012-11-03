@@ -59,6 +59,10 @@ TS.chartsC = Em.Object.create({
 
 // Stats Object
 TS.stats = Em.Object.create({
+  // Query and running state
+  query: null,
+  running: false,
+
   // Date range of tweets
   date_begin: null,
   date_end: null,
@@ -94,6 +98,10 @@ TS.stats = Em.Object.create({
   // Reset all stats
   // e.g. when new search is being submitted
   reset: function() {
+    // Query and running flag
+    this.set('query', null);
+    this.set('running', false);
+
     // Date Range of tweets
     this.set('date_begin', null);
     this.set('date_end', null);
@@ -213,6 +221,10 @@ TS.tweetsC = Em.ArrayController.create({
     this.set('_minId', null);
     TS.stats.reset();
 
+    // Set query and running flag
+    TS.stats.set('query', query);
+    TS.stats.set('running', true);
+
     // Build initial query string
     var fragment = "?q=" + encodeURIComponent(query);
 
@@ -237,10 +249,10 @@ TS.tweetsC = Em.ArrayController.create({
       var add_count = self.addTweets(data.results)
 
       // Exit search loop if no new tweets were added in the current run
-      if (add_count === 0) return;
+      if (add_count === 0) return TS.stats.set('running', false);
 
       // Exit search loop if query changed
-      if (orig_query !== self.get('query')) return;
+      if (orig_query !== self.get('query')) return TS.stats.set('running', false);
 
       // Build fragment for next search run containing new and lower max_id
       // of the currently oldest retrieved tweet
@@ -300,6 +312,15 @@ TS.tweetsC = Em.ArrayController.create({
     // Return length of new tweets
     // to be able to abort search if no new tweets can be found
     return new_tweets.length;
+  },
+
+  // Cancel running search
+  // by setting running flag to false
+  // and emptying query
+  cancelSearch: function() {
+    TS.stats.set('running', false)
+    this.set('query', null)
+    return;
   },
 
   // Count tweets
@@ -444,5 +465,4 @@ avg_tweets_stats = function(timeframe) {
   var key = "avg_" + timeframe.stats_key;
   set_stat(key, avg);
 };
-
 
