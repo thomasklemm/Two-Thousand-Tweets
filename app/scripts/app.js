@@ -1,62 +1,9 @@
+// Create App
 var TS = Em.Application.create();
-
-TS.stats = Em.Object.create({
-  // Date range of tweets
-  date_begin: null,
-  date_end: null,
-
-  // Relative ends
-  oldest: function() {
-    var time = this.get('date_begin');
-    return time ? moment(time).fromNow().capitalizeFirstLetter() : '-';
-  }.property('date_begin').cacheable(),
-  oldest_time: function() {
-    time = this.get('date_begin');
-    return time ? moment(time).format('HH:mm:ss') : '-';
-  }.property('date_begin').cacheable(),
-  newest: function() {
-    var time = this.get('date_end');
-    return time ? moment(time).fromNow().capitalizeFirstLetter() : '-';
-  }.property('date_end').cacheable(),
-
-  // Unit of x-axis of charts
-  chart_unit: 'minute',
-
-  // Average per timeframe
-  avg_hours:   0.0,
-  avg_minutes: 0.0,
-  avg_seconds: 0.0,
-
-  // Maxiumums per timeframe
-  max_hours:   0,
-  max_minutes: 0,
-  max_seconds: 0,
-
-  // Lowest id
-  // min_id: null,
-
-  reset: function() {
-    this.set('date_begin', null);
-    this.set('date_end', null);
-
-    this.set('max_hours', 0);
-    this.set('max_minutes', 0);
-    this.set('max_seconds', 0);
-
-    this.set('avg_hours', 0);
-    this.set('avg_minutes', 0);
-    this.set('avg_seconds', 0);
-  }
-});
-
-String.prototype.capitalizeFirstLetter = function() {
-  return this.charAt(0).toUpperCase() + this.slice(1);
-} // Source: http://stackoverflow.com/questions/1026069/capitalize-the-first-letter-of-string-in-javascript
 
 /**************************
 * Models
 **************************/
-
 
 // Tweet model
 //   name       <- Real Name (Thomas Klemm)
@@ -65,7 +12,6 @@ String.prototype.capitalizeFirstLetter = function() {
 //   text       <- Tweet Content ('We are the world.')
 //   created_at <- Date of the tweet as Date
 //   timeago    <- Relative timestamp as a computed property
-
 TS.Tweet = Em.Object.extend({
   name: null,
   login: null,
@@ -78,7 +24,8 @@ TS.Tweet = Em.Object.extend({
   }.property('created_at').cacheable()
 });
 
-// Charts
+// Charts Object
+// to determine which timeframe for graphing is selected
 var selected_chart = null;
 var charts = [
     Em.Object.create({id: 1, label: "1 Hour"}),
@@ -87,15 +34,69 @@ var charts = [
     Em.Object.create({id: 4, label: "10 Seconds"})
 ]
 
+// Charts Controller
 TS.chartsC = Em.Object.create({
   selectedChart: selected_chart,
   content: charts
+});
+
+// Stats Object
+TS.stats = Em.Object.create({
+  // Date range of tweets
+  date_begin: null,
+  date_end: null,
+
+  // Averages per timeframe
+  avg_hours:   0.0,
+  avg_minutes: 0.0,
+  avg_seconds: 0.0,
+
+  // Maxiumums per timeframe
+  max_hours:   0,
+  max_minutes: 0,
+  max_seconds: 0,
+
+  // Reset all stats
+  // e.g. when new search is being submitted
+  reset: function() {
+    this.set('date_begin', null);
+    this.set('date_end', null);
+
+    this.set('max_hours', 0);
+    this.set('max_minutes', 0);
+    this.set('max_seconds', 0);
+
+    this.set('avg_hours', 0);
+    this.set('avg_minutes', 0);
+    this.set('avg_seconds', 0);
+  },
+
+  // Computed Stats
+  // Relative Timestamps for begin and end of tweets' data range
+  oldest: function() {
+    var time = this.get('date_begin');
+    time = time ? moment(time).fromNow() : '-';
+    return time.capitalizeFirstLetter();
+  }.property('date_begin').cacheable(),
+
+  oldest_time: function() {
+    time = this.get('date_begin');
+    return time ? moment(time).format('HH:mm:ss') : '-';
+  }.property('date_begin').cacheable(),
+
+  newest: function() {
+    var time = this.get('date_end');
+    time = time ? moment(time).fromNow() : '-';
+    return time.capitalizeFirstLetter();
+  }.property('date_end').cacheable(),
 });
 
 /**************************
 * Views
 **************************/
 
+// SearchField
+// with Autofocus
 TS.SearchField = Em.TextField.extend({
   didInsertElement: function() {
     this.$().focus();
@@ -106,66 +107,77 @@ TS.SearchField = Em.TextField.extend({
 * Controllers
 **************************/
 
+// Tweets Controller
+// handles the Array of Tweets
+// Implements search logic
+// Auto-updates the view if underlying array changes
 TS.tweetsC = Em.ArrayController.create({
   // Defaults
   content: [],
   query: null,
 
   // Simple idCache to ensure uniqueness of tweets added
-  id_cache: [],
-  min_id: null,
+  _idCache: [],
+  _minId: null,
 
   // Search for a certain query
   // and get all recent tweets
-  //
-  // Executes automatically if query changes
   search: function() {
     var query = this.get('query');
 
-    // Only perform search if query is present
+    // Perform search only if query is present, otherwise return
     if (Em.empty(query)) {
       return;
     }
 
-    // Reset content and search
+    // Reset tweets array, _idCache, and _minId
+    // Reset statistics object
     this.set('content', []);
-    this.set('id_cache', []);
-    this.set('min_id', null);
-
-    // Reset stats
+    this.set('_idCache', []);
+    this.set('_minId', null);
     TS.stats.reset();
 
-    // Initial query
+    // Build initial query string
     var fragment = "?q=" + encodeURIComponent(query);
+
+    // Poll Twitter
     this.searchTwitter(fragment, query);
   },
 
-  // Query Twitter
-  // and add results to collection
+  // Poll Twitter
+  // and push resulting tweet objects to content array
+  // Calls itself with new max_id when there might be more tweets to fetch
+  // otherwise returns if no new tweets were added
   searchTwitter: function(fragment, orig_query) {
+    // Variables
     var url = "http://search.twitter.com/search.json" + fragment + "&callback=?"
     var next_fragment = null;
     var self = this;
 
+    // Poll Twitter JSON Search API
     $.getJSON(url, function(data) {
-      // Add results to collection
+      // Add tweets to collection
+      // Returns number of tweets added
       var tweets_added_count = self.addTweets(data.results)
 
-      // Return if no new tweets have been added
-      if (tweets_added_count === 0) return alert('test');
+      // Exit search loop if no new tweets were added in the current run
+      if (tweets_added_count === 0) return;
 
-      // Assign next url
-      next_fragment = "?q=" + encodeURIComponent(orig_query) + "&max_id=" + self.get('min_id');
+      // Exit search loop if query changed
+      if (orig_query == self.get('query') return;
 
-      // Retrieve next page
-      // up to 20 pages => ~ 330 tweets
-      if (orig_query == self.get('query')) {
-        if (next_fragment) self.searchTwitter(next_fragment, orig_query);
-      }
+      // Build fragment for next search run containing new and lower max_id
+      // of the currently oldest retrieved tweet
+      next_fragment = "?q=" + encodeURIComponent(orig_query) + "&max_id=" + self.get('_minId');
+
+      // Poll Twitter once again
+      self.searchTwitter(next_fragment, orig_query);
     });
   },
 
-  // Add tweets to collection
+  // Adds Tweets to tweetsC's content array
+  // Checks for uniqueness of tweets and tries to prevent duplicates
+  // Returns the number of unique tweets that were added to the collection
   addTweets: function(tweets) {
     var new_tweets = [];
     var self = this;
@@ -183,14 +195,14 @@ TS.tweetsC = Em.ArrayController.create({
       });
 
       // Add tweet to collection unless it is already in there
-      if (this.id_cache.indexOf(tweet.id) === -1) {
+      if (this._idCache.indexOf(tweet.id) === -1) {
         new_tweets.push(tweet);
         // Maybe unshift
-        this.id_cache.push(tweet.id);
+        this._idCache.push(tweet.id);
 
-        // Store min_id
-        if (!self.min_id) self.set('min_id', tweet.id);
-        if (tweet.id < self.min_id) self.set('min_id', tweet.id);
+        // Store _minId
+        if (!self._minId) self.set('_minId', tweet.id);
+        if (tweet.id < self._minId) self.set('_minId', tweet.id);
 
         // Store oldest tweet date
         if (!TS.stats.date_begin) {
@@ -304,16 +316,12 @@ graph_data = function(content) {
   var group = {};
   if (content.length < 120) {
     group = group_minutes;
-    TS.stats.set('chart_unit', 'minute');
   } else if (max_hours < 170) {
     group = group_hours;
-    TS.stats.set('chart_unit', 'hour');
   } else if (max_minutes > 30) {
     group = group_seconds;
-    TS.stats.set('chart_unit', 'second');
   } else {
     group = group_minutes;
-    TS.stats.set('chart_unit', 'minute');
   }
 
   var data = []
