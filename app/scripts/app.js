@@ -1,10 +1,5 @@
 // Create App
-var TS = Em.Application.create({
-  // ready: function() {
-  //   // Set current time once per second
-  //   setInterval(function() {TS.stats.setCurrentTime()}, 1000);
-  // }
-});
+var TS = Em.Application.create({});
 
 // Prototype Extensions
 String.prototype.capitalize = function() {
@@ -38,11 +33,17 @@ TS.Tweet = Em.Object.extend({
 // to determine which timeframe for graphing is selected
 var selected_chart = null;
 var charts = [
-  Em.Object.create({id: 1, label: "1 Hour",     format: "YYYY-M-DD HH:00",    last_digit_zero: false}),
-  Em.Object.create({id: 2, label: "10 Minutes", format: "YYYY-M-DD HH:mm",    last_digit_zero: true}),
-  selected_chart =
-  Em.Object.create({id: 3, label: "1 Minute",   format: "YYYY-M-DD HH:mm",    last_digit_zero: false}),
-  Em.Object.create({id: 4, label: "10 Seconds", format: "YYYY-M-DD HH:mm:ss", last_digit_zero: true})
+  Em.Object.create({id: 1, label: "1 Hour", stats_key: "hours",
+    format: "YYYY-M-DD HH:00", last_digit_zero: false, in_ms: 3600000}),
+
+  Em.Object.create({id: 2, label: "10 Minutes", stats_key: "10_minutes",
+    format: "YYYY-M-DD HH:mm", last_digit_zero: true, in_ms: 600000}),
+
+  selected_chart = Em.Object.create({id: 3, label: "1 Minute", stats_key: "minutes",
+    format: "YYYY-M-DD HH:mm", last_digit_zero: false, in_ms: 60000}),
+
+  Em.Object.create({id: 4, label: "10 Seconds", stats_key: "10_seconds",
+    format: "YYYY-M-DD HH:mm:ss", last_digit_zero: true, in_ms: 10000})
 ]
 
 // Charts Controller
@@ -74,6 +75,12 @@ TS.stats = Em.Object.create({
   max_minutes:    0,
   max_10_seconds: 0,
 
+  // Date of maxiuma
+  max_hours_time:      '-',
+  max_10_minutes_time: '-',
+  max_minutes_time:    '-',
+  max_10_seconds_time: '-',
+
   // Current time
   // for initial graph
   current_time: 'now',
@@ -96,6 +103,12 @@ TS.stats = Em.Object.create({
     this.set('max_10_minutes', 0);
     this.set('max_minutes', 0);
     this.set('max_10_seconds', 0);
+
+    // Date of maxima
+    this.set('max_hours_time', '-');
+    this.set('max_10_minutes_time', '-');
+    this.set('max_minutes_time', '-');
+    this.set('max_10_seconds_time', '-');
 
     // Averages per timeframe
     this.set('avg_hours', 0);
@@ -121,13 +134,13 @@ TS.stats = Em.Object.create({
   oldest: function() {
     var time = this.get('date_begin');
     time = time ? moment(time).fromNow() : '-';
-    return time.capitalize();
+    return time;
   }.property('date_begin').cacheable(),
 
   newest: function() {
     var time = this.get('date_end');
     time = time ? moment(time).fromNow() : '-';
-    return time.capitalize();
+    return time == 'a few seconds ago' ? 'now' : time;
   }.property('date_end').cacheable(),
 
   // Calendar time ('Today at 12:00 PM')
@@ -140,6 +153,15 @@ TS.stats = Em.Object.create({
     time = this.get('date_end');
     return time ? moment(time).calendar() : '-';
   }.property('date_end').cacheable(),
+
+  // Time Range
+  range: function() {
+    return this.get('date_end') - this.get('date_begin');
+  }.property('date_begin', 'date_end').cacheable(),
+
+  range_time: function() {
+    return moment.humanizeDuration(this.get('range'));
+  }.property('range').cacheable()
 });
 
 /**************************
@@ -291,11 +313,18 @@ TS.tweetsC = Em.ArrayController.create({
   contentChanged: function() {
     // Calculate and set new graph data
     draw_graph();
+
+    // Calculate and set statistics
+    calculate_stats();
   }.observes('content.@each')
 });
 
 /**************************
 * App Logic
+**************************/
+
+/**************************
+* Graph
 **************************/
 
 // Draw a new morris.js graph
@@ -305,6 +334,7 @@ draw_graph = function() {
 
   // Calculate Graph data from tweets array
   var graph_data = format_tweet_data_for_morris(tweets);
+  // graph_data = [{'time': TS.stats.current_time, 'count': 0}];
 
   // Refresh graph with new data
   graph.setData(graph_data);
@@ -346,7 +376,7 @@ tweets_count_per_time  = function(tweets, timeframe) {
   for (i = 0; i < length; i++) {
     var tweet = tweets[i];
     var time = moment(tweet.created_at).format(timeframe.format);
-
+    // var time = tweet.created_at.toSpecialString(timeframe.minutes, true, true);
     // For 10 minutes and 10 seconds frame
     // replace last digit with 0
     if (timeframe.last_digit_zero) {
@@ -361,16 +391,9 @@ tweets_count_per_time  = function(tweets, timeframe) {
   return times_and_counts;
 };
 
-// max_tweets = function(group) {
-//   max = 0;
-
-//   for (key in group) {
-//     if (group[key] > max) max = group[key];
-//   };
-
-//   return max;
-// }
-
+// Morris.js Line Chart
+// displaying number of tweets per time unit
+// features selectable timeframes
 var graph = Morris.Line({
   element: 'chart',
   data: [{'time': TS.stats.current_time, 'count': 0}],
@@ -381,3 +404,45 @@ var graph = Morris.Line({
   // as an equally-spaced series
   // parseTime: false
 });
+
+/**************************
+* Statistics
+**************************/
+
+// Calculate all stats
+calculate_stats = function() {
+  // Load tweets and timeframes
+  var tweets = TS.tweetsC.get('content');
+  var timeframes = TS.chartsC.get('content');
+
+  // Iterate over timeframes
+  var length = timeframes.length;
+  for (i = 0; i < length; i++) {
+    var timeframe = timeframes[i];
+
+    // Calc. and set averages for timeframe
+    avg_tweets_stats(timeframe);
+  };
+  return;
+};
+
+// Set a single value in the TS.stats object
+set_stat = function(key, value) {
+  TS.stats.set(key, value);
+};
+
+avg_tweets_stats = function(timeframe) {
+  var avg = 0;
+  var count = TS.tweetsC.get('tweetsCount');
+  var range = TS.stats.get('range');
+
+  // Calculate average and round result
+  avg = count / (range / timeframe.in_ms);
+  avg = avg.toFixed(2);
+
+  // Set stats
+  var key = "avg_" + timeframe.stats_key;
+  set_stat(key, avg);
+};
+
+

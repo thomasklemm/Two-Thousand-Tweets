@@ -97,29 +97,31 @@
 
           <ul class='disc'>
             <li>
-              Results
+              <b>{{TS.tweetsC.tweetsCount}} Tweets</b><br />
+              from <b>{{TS.stats.oldest}}</b><br />
+              to <b>{{TS.stats.newest}}</b>
+            </li>
+
+            <li>
+              Average Number of Tweets
               <ul class='square'>
-                <li>Count: <b>{{TS.tweetsC.tweetsCount}}</b></li>
-                <li>Oldest: <b>{{TS.stats.oldest}}</b></li>
-                <li>Newest: <b>{{TS.stats.newest}}</b></li>
+                <li><b>{{TS.stats.avg_10_seconds}}</b> per 10 Seconds</li>
+                <li><b>{{TS.stats.avg_minutes}}</b> per Minute</li>
+                <li><b>{{TS.stats.avg_10_minutes}}</b> per 10 Minutes</li>
+                <li><b>{{TS.stats.avg_hours}}</b> per Hour</li>
               </ul>
             </li>
-            <li>
-              Average Tweets
-              <ul class='square'>
-                <li>per Second: <b>{{TS.stats.avg_seconds}}</b></li>
-                <li>per Minute: <b>{{TS.stats.avg_minutes}}</b></li>
-                <li>per Hour: <b>{{TS.stats.avg_hours}}</b></li>
-              </ul>
-            </li>
-            <li>
+
+            <!-- <li>
               Maximum Tweets
               <ul class='square'>
-                <li>per Second: <b>{{TS.stats.max_seconds}}</b></li>
-                <li>per Minute: <b>{{TS.stats.max_minutes}}</b></li>
-                <li>per Hour: <b>{{TS.stats.max_hours}}</b></li>
+                <li>per 10 Seconds: <b>{{TS.stats.max_10_seconds}}</b> ({{TS.stats.max_10_seconds_time}})</li>
+                <li>per Minute: <b>{{TS.stats.max_minutes}}</b> ({{TS.stats.max_minutes_time}})</li>
+                <li>per 10 Minutes: <b>{{TS.stats.max_10_minutes}}</b> ({{TS.stats.max_10_minutes_time}})</li>
+                <li>per Hour: <b>{{TS.stats.max_hours}}</b> ({{TS.stats.max_hours_time}})</li>
               </ul>
-            </li>
+            </li> -->
+
           </ul>
         </script>
 
@@ -132,7 +134,7 @@
 
 
   <!-- The missing protocol means that it will match the current protocol, either http or https. If running locally, we use the local jQuery. -->
-  <!-- <script src="scripts/libs/datetoiso8601.js"></script> -->
+  <script src="scripts/libs/datetoiso8601.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
   <script>window.jQuery || document.write('<script src="scripts/libs/jquery-1.7.2.min.js"><\/script>')</script>
   <script src="scripts/libs/moment.js"></script>

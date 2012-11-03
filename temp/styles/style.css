@@ -56,33 +56,34 @@ h5 small {
 
 /* line 37, ../../app/styles/style.sass */
 .tweet {
-  padding: 1rem 0;
+  padding: 8px 0;
   border-bottom: 1px solid #dddddd;
+  min-height: 70px;
 }
-/* line 41, ../../app/styles/style.sass */
+/* line 42, ../../app/styles/style.sass */
 .tweet .avatar {
   width: 48px;
   height: 48px;
   float: left;
-  border-radius: 4px;
+  border-radius: 5px;
   margin-right: 1rem;
   margin-top: 3px;
 }
-/* line 48, ../../app/styles/style.sass */
+/* line 49, ../../app/styles/style.sass */
 .tweet .name {
   font-weight: bold;
   font-size: 15px;
 }
-/* line 52, ../../app/styles/style.sass */
+/* line 53, ../../app/styles/style.sass */
 .tweet .login, .tweet .timeago {
   color: #777777;
   font-size: 13px;
 }
-/* line 55, ../../app/styles/style.sass */
+/* line 56, ../../app/styles/style.sass */
 .tweet .timeago {
   float: right;
 }
-/* line 57, ../../app/styles/style.sass */
+/* line 58, ../../app/styles/style.sass */
 .tweet .text {
   display: block;
 }
