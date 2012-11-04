@@ -17,7 +17,6 @@
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="styles/foundation.min.css">
-  <link rel="stylesheet" href="styles/chosen.css">
   <link rel="stylesheet" href="styles/style.css">
 
   <!--[if lt IE 9]>
@@ -96,6 +95,7 @@
           <h4 class="nopad nomarg">Recent Tweets {{#if TS.stats.query}}<small>for "{{TS.stats.query}}"</small>{{/if}}</h4>
 
           {{#each TS.tweetsC}}
+            <!-- Individual Tweet -->
             <div class="tweet">
               <img  class='avatar' {{bindAttr src="image_url"}} width="48" height="48" />
               <span class='name'>{{name}}</span>
@@ -104,6 +104,7 @@
               <span class='text'>{{text}}</span>
             </div>
           {{else}}
+            <!-- Introductory text -->
             <p></p>
             <em>Search Twitter to see results ...
           {{/each}}
@@ -141,6 +142,7 @@
               </ul>
             </li>
 
+            <!-- Maxiuma -->
             <!-- <li>
               Maximum Tweets
               <ul class='square'>
@@ -170,8 +172,6 @@
 
   <!-- Moment.js: Date Parsing and Formatting -->
   <script src="scripts/libs/moment.js"></script>
-  <!-- Chosen: Great Select Boxes -->
-  <script src="scripts/libs/chosen.jquery.js"></script>
 
   <!-- Ember.js: Client-side MVC Framework -->
   <script src="scripts/libs/handlebars-1.0.0.beta.6.js"></script>
