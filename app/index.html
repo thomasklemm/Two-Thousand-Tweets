@@ -92,23 +92,43 @@
       <!-- Tweets -->
       <script type="text/x-handlebars">
         <div id="tweets" class="panel radius">
-          <h4 class="nopad nomarg">Recent Tweets {{#if TS.stats.query}}<small>for "{{TS.stats.query}}"</small>{{/if}}</h4>
+          {{#if TS.stats.query}}
+            <h3>
+              Recent Tweets
+              <small>for "{{TS.stats.query}}"</small>
+            </h3>
 
-          {{#each TS.tweetsC}}
-            <!-- Individual Tweet -->
-            <div class="tweet">
-              <img  class='avatar' {{bindAttr src="image_url"}} width="48" height="48" />
-              <span class='name'>{{name}}</span>
-              <span class='login'>(@{{login}})</span>
-              <span class='timeago'>{{timeago}}</span>
-              <span class='text'>{{text}}</span>
-            </div>
+            {{#each TS.tweetsC}}
+              <!-- Individual Tweet -->
+              <div class="tweet">
+                <!-- <img  class='avatar' {{bindAttr src="image_url"}} width="48" height="48" /> -->
+                <span class='name'>{{name}}</span>
+                <span class='login'>(@{{login}})</span>
+                <span class='timeago'>{{timeago}}</span>
+                <span class='text'>{{text}}</span>
+              </div>
+            {{/each}}
+
           {{else}}
-            <!-- Introductory text -->
-            <p></p>
-            <em>Search Twitter to see results ...
-          {{/each}}
 
+            <!-- Welcome text -->
+            <h2><a href="http://thomasklemm.github.com/Two-Thousand-Tweets">2000 Tweets</a></h2>
+
+            <p><b>Welcome</b>. 2000 Tweets is a Twitter search built on Ember and Morris.js. It retrieves the most recent tweets for your search and charts the results over time. You may select and switch the chart's time horizon any time and it updates instantly.</p>
+
+            <h4>Technology</h4>
+
+            <p>2000 Tweets uses <a href="http://emberjs.com/">Ember.js</a> - "A framework for creating ambitious web application" - to display the most recent tweets matching a user's search. Tweets will be quickly downloaded in an asynchronous fashion. A graph displaying the distribution of these tweets over time continuously updates, with the user being able to select among time slices between ten seconds and one hour for counting tweets. The time-series is visualized leveraging <a href="http://www.oesmith.co.uk/morris.js/">Morris.js</a>.</p>
+
+            <h4>About me</h4>
+
+            <p>Hello there, I am <a href="http://tklemm.eu"><b>Thomas Klemm</b></a>. I'm a web developer based in Berlin. If you like this app and would like to share some feedback, feel free to reach out to me at <a href="mailto:github@tklemm.eu">github@tklemm.eu</a>.</p>
+
+            <h4>License</h4>
+
+            <p>MIT</p>
+
+          {{/if}}
         </div>
       </script>
 
@@ -161,7 +181,7 @@
   </div>
 
   <!-- Fork me Ribbon -->
-  <a href="https://github.com/thomasklemm/recentTweets"><img style="position: absolute; top: -16px; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+  <a href="http://thomasklemm.github.com/Two-Thousand-Tweets"><img style="position: absolute; top: -16px; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
 
   <!-- Javascripts -->
 

@@ -209,6 +209,10 @@ TS.tweetsC = Em.ArrayController.create({
     // Load query
     var query = this.get('query');
 
+    // Perform search only if there is a new query
+    var old_query = TS.stats.get('query');
+    if (query === old_query) return;
+
     // Perform search only if query is present
     // otherwise clear view by emptying tweets array
     // and resetting stats
@@ -415,11 +419,11 @@ twitter_url = function(query, max_id, page) {
   // Default empty string for query
   query = typeof query !== 'undefined' ? query : '';
 
-  return 'http://search.twitter.com/search.json?q='        // base
-    + encodeURIComponent(query)                          // + query
-    + (max_id ? ('&max_id=' + max_id) : '')              // + max_id
-    + (page ? ('&page=' + page) : '')                   // + page
-    + '&callback=?'                                        // + callback (to allow origin)
+  return 'http://search.twitter.com/search.json?q='  // base
+    + encodeURIComponent(query)                      // + query
+    + (max_id ? ('&max_id=' + max_id) : '')          // + max_id
+    + (page ? ('&page=' + page) : '')                // + page
+    + '&callback=?'                                  // + callback (allows request origin)
 };
 
 /**************************
