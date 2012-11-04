@@ -78,9 +78,9 @@
             {{view TS.SearchField placeholder="Search Twitter for #sandy, @dhh, 37signals..." id="searchfield" valueBinding="TS.tweetsC.query"}}
 
             <!-- Search and Stop Buttons -->
-            {{#unless TS.stats.running}}
+            {{#unless TS.stats.searching}}
               <!-- Search Button -->
-              <button {{action "search" target="TS.tweetsC"}} class="button radius" id="searchbutton">Search Twitter</button>
+              <button {{action "initSearch" target="TS.tweetsC"}} class="button radius" id="searchbutton">Search Twitter</button>
             {{else}}
               <!-- Stop BUtton -->
               <button {{action "cancelSearch" target="TS.tweetsC"}} class="alert button radius" id="searchbutton">Stop</button>

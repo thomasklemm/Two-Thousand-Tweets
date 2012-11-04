@@ -59,13 +59,20 @@ TS.chartsC = Em.Object.create({
 
 // Stats Object
 TS.stats = Em.Object.create({
-  // Query and running state
+  // Query
   query: null,
-  running: false,
+
+  // Flag that indicates whether the search is active
+  // or has been canceled
+  searching: false,
 
   // Date range of tweets
   date_begin: null,
   date_end: null,
+
+  // Current time
+  // for initial graph
+  current_time: 'now',
 
   // Averages per timeframe
   avg_hours:      0,
@@ -73,27 +80,17 @@ TS.stats = Em.Object.create({
   avg_minutes:    0,
   avg_10_seconds: 0,
 
-  // Maxima per timeframe
-  max_hours:      0,
-  max_10_minutes: 0,
-  max_minutes:    0,
-  max_10_seconds: 0,
+  // // Maxima per timeframe
+  // max_hours:      0,
+  // max_10_minutes: 0,
+  // max_minutes:    0,
+  // max_10_seconds: 0,
 
-  // Date of maxiuma
-  max_hours_time:      '-',
-  max_10_minutes_time: '-',
-  max_minutes_time:    '-',
-  max_10_seconds_time: '-',
-
-  // Current time
-  // for initial graph
-  current_time: 'now',
-
-  // Set current time
-  // runs every second
-  // setCurrentTime: function() {
-  //   this.set('current_time', moment().format("YYYY-M-DD HH:mm:ss"));
-  // },
+  // // Date of maxima per timeframe
+  // max_hours_time:      '-',
+  // max_10_minutes_time: '-',
+  // max_minutes_time:    '-',
+  // max_10_seconds_time: '-',
 
   // Reset all stats
   // e.g. when new search is being submitted
@@ -106,23 +103,23 @@ TS.stats = Em.Object.create({
     this.set('date_begin', null);
     this.set('date_end', null);
 
-    // Maxima per timeframe
-    this.set('max_hours', 0);
-    this.set('max_10_minutes', 0);
-    this.set('max_minutes', 0);
-    this.set('max_10_seconds', 0);
-
-    // Date of maxima
-    this.set('max_hours_time', '-');
-    this.set('max_10_minutes_time', '-');
-    this.set('max_minutes_time', '-');
-    this.set('max_10_seconds_time', '-');
-
     // Averages per timeframe
     this.set('avg_hours', 0);
     this.set('avg_10_minutes', 0);
     this.set('avg_minutes', 0);
     this.set('avg_10_seconds', 0);
+
+    // // Maxima per timeframe
+    // this.set('max_hours', 0);
+    // this.set('max_10_minutes', 0);
+    // this.set('max_minutes', 0);
+    // this.set('max_10_seconds', 0);
+
+    // // Date of maxima
+    // this.set('max_hours_time', '-');
+    // this.set('max_10_minutes_time', '-');
+    // this.set('max_minutes_time', '-');
+    // this.set('max_10_seconds_time', '-');
   },
 
   // Set current stats from tweet in processing
@@ -162,15 +159,13 @@ TS.stats = Em.Object.create({
     return time ? moment(time).calendar() : '-';
   }.property('date_end').cacheable(),
 
-  // Time Range
+  // Time Range of retrieved tweets
+  // in milliseconds
   range: function() {
     return this.get('date_end') - this.get('date_begin');
-  }.property('date_begin', 'date_end').cacheable(),
-
-  range_time: function() {
-    return moment.humanizeDuration(this.get('range'));
-  }.property('range').cacheable()
+  }.property('date_begin', 'date_end').cacheable()
 });
+
 
 /**************************
 * Views
@@ -201,79 +196,162 @@ TS.tweetsC = Em.ArrayController.create({
   _idCache: [],
   _minId: null,
 
+  // Count tweets
+  // flagged as property dependend on content.@each
+  tweetsCount: function() {
+    return this.get('content').length;
+  }.property('content.@each').cacheable(),
+
+  // Initialize Twitter search
   // Search for a certain query
   // and get all recent tweets
-  search: function() {
+  initSearch: function() {
+    // Load query
     var query = this.get('query');
 
     // Perform search only if query is present
-    // otherwise reset view and return
+    // otherwise clear view by emptying tweets array
+    // and resetting stats
     if (Em.empty(query)) {
-      this.set('content', []);
+      this.resetSearch();
       TS.stats.reset();
       return;
     }
 
-    // Reset tweets array, _idCache, and _minId
-    // Reset statistics object
+    // Reset tweet results and temporary caches
+    this.resetSearch();
+
+    // Reset statistics
+    TS.stats.reset();
+
+    // Set query
+    TS.stats.set('query', query);
+    TS.stats.set('searching', true);
+
+    // Start drawing interval
+    start_drawing();
+
+    // Spawn the Search Master
+    this.searchMaster(query);
+    return;
+  },
+
+  // Cancel search manually
+  // by setting searching flag
+  // in the stats object to false
+  cancelSearch: function() {
+    TS.stats.set('searching', false);
+
+    // Cancel graph drawing interval
+    stop_drawing();
+
+    // Calculate and set statistics
+    calculate_stats();
+    return;
+  },
+
+  // Reset tweetsC object
+  // before a new query is executed
+  resetSearch: function() {
     this.set('content', []);
     this.set('_idCache', []);
     this.set('_minId', null);
-    TS.stats.reset();
+    return;
 
-    // Set query and running flag
-    TS.stats.set('query', query);
-    TS.stats.set('running', true);
-
-    // Build initial query string
-    var fragment = "?q=" + encodeURIComponent(query);
-
-    // Poll Twitter
-    this.searchTwitter(fragment, query);
+    //
   },
 
-  // Poll Twitter
-  // and push resulting tweet objects to content array
-  // Calls itself with new max_id when there might be more tweets to fetch
-  // otherwise returns if no new tweets were added
-  searchTwitter: function(fragment, orig_query) {
-    // Variables
-    var url = "http://search.twitter.com/search.json" + fragment + "&callback=?"
-    var next_fragment = null;
+  // Search Master
+  // Controls the search flow
+  searchMaster: function(query, max_id, page) {
+    // Url for Search Master
+    // Initially only contains query, no max_id or page
+    // Later contains max_id and page as well
+    var master_url = twitter_url(query, max_id, page);
     var self = this;
+
+    // Poll Twitter JSON Search API
+    $.getJSON(master_url, function(data) {
+      // Add tweets to collection
+      self.addTweets(data.results, query);
+
+      //
+      // Decide whether to perform next round of searches
+      //
+
+      // Cancel if query (in the stats object) has changed
+      // Do not cancel if query in search field changed without submission
+      var current_query = TS.stats.get('query');
+      if (query !== current_query) {
+        // Set searching flag to false
+        self.cancelSearch();
+        return;
+      }
+
+      // Cancel search if more than X tweets loaded
+      var count = self.get('tweetsCount');
+      if (count > 2000) {
+        self.cancelSearch();
+        return;
+      }
+
+      // Cancel if searching flag has been set to false
+      var searching = TS.stats.get('searching');
+      if (searching !== true) return;
+
+      //
+      // Spawn next round of searches
+      //
+
+      // New max_id is current minimum id
+      var new_max_id = self.get('_minId');
+
+      // Spawn workers
+      // to retrieve page 1 to 11
+      for (var page = 1; page <= 11; page++) {
+        self.searchWorker(query, new_max_id, page);
+      };
+
+      // Send Search Master to retrieve last page in Twitter API pagination
+      // and spawn workers for the next batch of pages
+      var master_page = 12;
+      self.searchMaster(query, new_max_id, master_page);
+    });
+
+    return;
+  },
+
+  // Search worker
+  // Takes query, max_id and page, polls Twitters
+  // and pushes the resulting tweet objects to content array
+  searchWorker: function(query, max_id, page) {
+    // Variables
+    var self = this;
+    var url = twitter_url(query, max_id, page);
 
     // Poll Twitter JSON Search API
     $.getJSON(url, function(data) {
       // Add tweets to collection
-      // Returns number of tweets added
-      var add_count = self.addTweets(data.results)
-
-      // Exit search loop if no new tweets were added in the current run
-      if (add_count === 0) return TS.stats.set('running', false);
-
-      // Exit search loop if query changed
-      if (orig_query !== self.get('query')) return TS.stats.set('running', false);
-
-      // Build fragment for next search run containing new and lower max_id
-      // of the currently oldest retrieved tweet
-      next_fragment = "?q=" + encodeURIComponent(orig_query) + "&max_id=" + self.get('_minId');
-
-      // Poll Twitter once again
-      self.searchTwitter(next_fragment, orig_query);
+      self.addTweets(data.results, query);
     });
+    return;
   },
 
   // Adds Tweets to tweetsC's content array
   // Checks for uniqueness of tweets and tries to prevent duplicates
   // Returns the number of unique tweets that were added to the collection
-  addTweets: function(tweets) {
+  addTweets: function(tweets, query) {
     // Array for new unique tweets to be added to collection
-    var self = this;
     var new_tweets = [];
+    var self = this;
+
+    // Return if no tweets were passed (Ajax error)
+    // To allow master to retry
+    if (Em.empty(tweets)) return;
 
     // Iterate over given raw tweets
     var length = tweets.length;
-    for (i = 0; i < length; i++) {
+    for (var i = 0; i < length; i++) {
       // Single raw tweet
       var t = tweets[i];
 
@@ -306,43 +384,43 @@ TS.tweetsC = Em.ArrayController.create({
       }
     };
 
+    // Get the current query
+    var current_query = TS.stats.get('query');
+
     // Push tweets to array
-    this.pushObjects(new_tweets);
-
-    // Return length of new tweets
-    // to be able to abort search if no new tweets can be found
-    return new_tweets.length;
-  },
-
-  // Cancel running search
-  // by setting running flag to false
-  // and emptying query
-  cancelSearch: function() {
-    TS.stats.set('running', false)
-    this.set('query', null)
+    // if the query is up to date
+    if (query === current_query) this.pushObjects(new_tweets);
     return;
   },
 
-  // Count tweets
-  // flagged as property dependend on content.@each
-  tweetsCount: function() {
-    return this.get('content').length;
-  }.property('content.@each').cacheable(),
+
 
   // Observer called when content array
   // containing tweet models changes
   contentChanged: function() {
     // Calculate and set new graph data
-    draw_graph();
+    // draw_graph();
 
     // Calculate and set statistics
-    calculate_stats();
+    // calculate_stats();
   }.observes('content.@each')
 });
 
 /**************************
 * App Logic
 **************************/
+
+// Builds the twitter api url to query
+twitter_url = function(query, max_id, page) {
+  // Default empty string for query
+  query = typeof query !== 'undefined' ? query : '';
+
+  return 'http://search.twitter.com/search.json?q='        // base
+    + encodeURIComponent(query)                          // + query
+    + (max_id ? ('&max_id=' + max_id) : '')              // + max_id
+    + (page ? ('&page=' + page) : '')                   // + page
+    + '&callback=?'                                        // + callback (to allow origin)
+};
 
 /**************************
 * Graph
@@ -353,9 +431,11 @@ draw_graph = function() {
   // Get current tweets
   var tweets = TS.tweetsC.get('content');
 
+  // Draw only when there are tweets
+  if (Ember.empty(tweets)) return;
+
   // Calculate Graph data from tweets array
   var graph_data = format_tweet_data_for_morris(tweets);
-  // graph_data = [{'time': TS.stats.current_time, 'count': 0}];
 
   // Refresh graph with new data
   graph.setData(graph_data);
@@ -394,10 +474,10 @@ tweets_count_per_time  = function(tweets, timeframe) {
   // to transform their timestamp to a common format,
   // and count the tweets for each timestamp
   var length = tweets.length;
-  for (i = 0; i < length; i++) {
+  for (var i = 0; i < length; i++) {
     var tweet = tweets[i];
     var time = moment(tweet.created_at).format(timeframe.format);
-    // var time = tweet.created_at.toSpecialString(timeframe.minutes, true, true);
+
     // For 10 minutes and 10 seconds frame
     // replace last digit with 0
     if (timeframe.last_digit_zero) {
@@ -427,6 +507,39 @@ var graph = Morris.Line({
 });
 
 /**************************
+* Drawing Intervals
+**************************/
+
+// Start drawing interval
+start_drawing = function() {
+  var id = setInterval(function() {
+    // Calculate tweets distribution over time
+    // and draw graph
+    draw_graph();
+  }, 500);
+
+  // Set interval id in order to be able to cancel it
+  TS.stats.set('drawing_interval_id', id);
+
+  // Draw graph for the first time
+  draw_graph();
+  return;
+};
+
+// Cancel drawing interval
+stop_drawing = function() {
+  // Get interval id
+  var id = TS.stats.get('drawing_interval_id');
+
+  // Cancel interval
+  clearInterval(id);
+
+  // Draw graph once
+  draw_graph();
+  return;
+};
+
+/**************************
 * Statistics
 **************************/
 
@@ -435,6 +548,9 @@ calculate_stats = function() {
   // Load tweets and timeframes
   var tweets = TS.tweetsC.get('content');
   var timeframes = TS.chartsC.get('content');
+
+  // Calculate stats only when there are tweets
+  if (Em.empty(tweets)) return;
 
   // Iterate over timeframes
   var length = timeframes.length;
