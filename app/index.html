@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 
-  <title>EmberTweets</title>
-  <meta name="description" content="An Ember.js application displaying Twitter search results in a Graph using Morris.js.">
+  <title>2000 Tweets</title>
+  <meta name="description" content="2000 Tweets is a Twitter search built on Ember and Morris.js.">
   <meta name="author" content="Thomas Klemm">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -101,7 +101,11 @@
             {{#each TS.tweetsC}}
               <!-- Individual Tweet -->
               <div class="tweet">
-                <!-- <img  class='avatar' {{bindAttr src="image_url"}} width="48" height="48" /> -->
+                <!-- Avatar -->
+                {{#if TS.stats.show_avatars}}
+                  <img  class='avatar' {{bindAttr src="image_url"}} width="48" height="48"  />
+                {{/if}}
+
                 <span class='name'>{{name}}</span>
                 <span class='login'>(@{{login}})</span>
                 <span class='timeago'>{{timeago}}</span>
@@ -174,6 +178,11 @@
             </li>
 
           </ul>
+
+          <!-- Show Tweeters' Avatars Checkbox -->
+          {{#view Ember.Checkbox checkedBinding="TS.stats.show_avatars"}}
+            <b>Show Avatars</b> <span style='color: #777'>&middot; Best in Chrome</b>
+          {{/view}}
         </script>
 
       </div>

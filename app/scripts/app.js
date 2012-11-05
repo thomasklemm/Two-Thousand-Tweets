@@ -1,3 +1,12 @@
+/*
+* 2000 Tweets
+*
+* A Twitter Search based on Ember.js and Morris.js
+*
+* Release: 2012-11-05
+* License: MIT (Thomas Klemm, 2012)
+*/
+
 // Create App
 var TS = Em.Application.create({});
 
@@ -10,13 +19,17 @@ String.prototype.capitalize = function() {
 * Models
 **************************/
 
-// Tweet model
-//   name       <- Real Name (Thomas Klemm)
-//   login      <- Twitter Handle (@thomasjklemm)
-//   image_url  <- Avatar Url (http://..../../avatar.png)
-//   text       <- Tweet Content ('We are the world.')
-//   created_at <- Date of the tweet as Date
-//   timeago    <- Relative timestamp as a computed property
+/*
+* Tweet
+*
+* Attributes:
+*   name       <- Real Name (Thomas Klemm)
+*   login      <- Twitter Handle (@thomasjklemm)
+*   image_url  <- Avatar Url (http://..../../avatar.png)
+*   text       <- Tweet Content ('We are the world.')
+*   created_at <- Date of the tweet as Date
+*   timeago    <- Relative timestamp as a computed property
+*/
 TS.Tweet = Em.Object.extend({
   name: null,
   login: null,
@@ -29,8 +42,12 @@ TS.Tweet = Em.Object.extend({
   }.property('created_at').cacheable()
 });
 
-// Charts Object
-// to determine which timeframe for graphing is selected
+
+/*
+* Chart
+*/
+
+// Charts Preparation
 var selected_chart = null;
 var charts = [
   Em.Object.create({id: 1, label: "1 Hour", stats_key: "hours",
@@ -47,6 +64,8 @@ var charts = [
 ]
 
 // Charts Controller
+// Handles the available and selected chart time horizons
+// and changes in the currently selected timeframe
 TS.chartsC = Em.Object.create({
   selectedChart: selected_chart,
   content: charts,
@@ -57,7 +76,14 @@ TS.chartsC = Em.Object.create({
   }.observes('selectedChart')
 });
 
+
+/*
+* Statistics
+*/
+
 // Stats Object
+// saves all statistical values
+// and flags required for operation
 TS.stats = Em.Object.create({
   // Query
   query: null,
@@ -91,6 +117,9 @@ TS.stats = Em.Object.create({
   max_10_minutes_time: '-',
   max_minutes_time:    '-',
   max_10_seconds_time: '-',
+
+  // Show avatars of tweeters
+  show_avatars: false,
 
   // Reset all stats
   // e.g. when new search is being submitted
@@ -172,12 +201,14 @@ TS.stats = Em.Object.create({
 **************************/
 
 // SearchField
+// where the user types his or her Twitter search phrase
 TS.SearchField = Em.TextField.extend({
   // Autofocus after insert
   didInsertElement: function() {
     this.$().focus();
   }
 });
+
 
 /**************************
 * Controllers
@@ -255,7 +286,7 @@ TS.tweetsC = Em.ArrayController.create({
 
       // Calculate and set statistics
       calculate_stats();
-    }, 1000);
+    }, 2500);
 
     return;
   },
@@ -267,8 +298,6 @@ TS.tweetsC = Em.ArrayController.create({
     this.set('_idCache', []);
     this.set('_minId', null);
     return;
-
-    //
   },
 
   // Search Master
@@ -416,6 +445,7 @@ TS.tweetsC = Em.ArrayController.create({
   }.observes('content.@each')
 });
 
+
 /**************************
 * App Logic
 **************************/
@@ -431,6 +461,7 @@ twitter_url = function(query, max_id, page) {
     + (page ? ('&page=' + page) : '')                // + page
     + '&callback=?'                                  // + callback (allows request origin)
 };
+
 
 /**************************
 * Graph
@@ -516,6 +547,7 @@ var graph = Morris.Line({
   // parseTime: false
 });
 
+
 /**************************
 * Drawing Intervals
 **************************/
@@ -548,6 +580,7 @@ stop_drawing = function() {
   draw_graph();
   return;
 };
+
 
 /**************************
 * Statistics
@@ -599,6 +632,7 @@ avg_tweets_stats = function(timeframe) {
   return;
 };
 
+// Calculate and set peaks per timeframe
 max_tweets_stats = function(tweets, timeframe) {
   var max = 0;
   var max_time = '-';
@@ -624,3 +658,7 @@ max_tweets_stats = function(tweets, timeframe) {
   set_stat(key_time, max_time);
   return;
 }
+
+/*
+* The End
+*/
