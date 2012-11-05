@@ -1,0 +1,208 @@
+<!doctype html>
+<!--[if lt IE 7 ]> <html lang="en" class="ie6"> <![endif]--> <!--[if IE 7 ]>    <html lang="en" class="ie7"> <![endif]--> <!--[if IE 8 ]>    <html lang="en" class="ie8"> <![endif]--> <!--[if IE 9 ]>    <html lang="en" class="ie9"> <![endif]-->
+<!--[if (gt IE 9)|!(IE)]><!--> <html lang="en"> <!--<![endif]-->
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>2000 Tweets</title>
+  <meta name="description" content="2000 Tweets is a Twitter search built on Ember and Morris.js.">
+  <meta name="author" content="Thomas Klemm">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Icons -->
+  <link rel="shortcut icon" href="/./favicon.ico">
+  <link rel="apple-touch-icon" href="/./apple-touch-icon.png">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles/a285bfe5.foundation.min.css">
+  <link rel="stylesheet" href="styles/38441fa4.style.css">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+</head>
+<body>
+
+  <!-- Chart -->
+  <div class="row">
+    <div class="twelve columns">
+
+      <div class="panel radius">
+        <!-- Headline for chart -->
+        <script type="text/x-handlebars">
+          <div><h5 class='nomarg nopad'>Tweets {{#if TS.stats.query}}<small>for "{{TS.stats.query}}"</small>{{/if}}</h5></div>
+        </script>
+
+        <!-- Chart -->
+        <div id="chart"></div>
+
+        <script type="text/x-handlebars">
+          <!-- One Glance Stats -->
+          {{#if TS.tweetsC.tweetsCount}}
+            <div>
+              <span><b>Tweets for "{{TS.stats.query}}" from {{TS.stats.oldest}}</b> &middot; ({{TS.stats.oldest_time}}) &middot; <b>up to {{TS.stats.newest}} </b> &middot; ({{TS.stats.newest_time}})</span>
+            </div>
+          {{else}}
+            <div>&nbsp;</div>
+          {{/if}}
+
+          <!-- Time Section Select -->
+          <div class="chart_select_wrap">
+            <b>Time Sections: &nbsp;</b>
+            {{view Ember.Select
+                   contentBinding="TS.chartsC.content"
+                   optionValuePath="content.id"
+                   optionLabelPath="content.label"
+                   selectionBinding="TS.chartsC.selectedChart"
+                   id ="chart_select" }}
+            <b>&nbsp; &larr; Give it a try!</b>
+          </div>
+        </script>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main Body -->
+  <div class="row">
+    <!-- Input and Tweets -->
+    <div class="eight columns">
+
+      <!-- Input -->
+      <script type="text/x-handlebars">
+        <div>
+          <form>
+            <!-- Searchfield -->
+            {{view TS.SearchField placeholder="Search Twitter for #sandy, @dhh, 37signals..." id="searchfield" valueBinding="TS.tweetsC.query"}}
+
+            <!-- Search and Stop Buttons -->
+            {{#unless TS.stats.searching}}
+              <!-- Search Button -->
+              <button {{action "initSearch" target="TS.tweetsC"}} class="button radius" id="searchbutton">Search Twitter</button>
+            {{else}}
+              <!-- Stop BUtton -->
+              <button {{action "cancelSearch" target="TS.tweetsC"}} class="alert button radius" id="searchbutton">Stop</button>
+            {{/unless}}
+          </form>
+        </div>
+      </script>
+
+      <!-- Tweets -->
+      <script type="text/x-handlebars">
+        <div id="tweets" class="panel radius">
+          {{#if TS.stats.query}}
+            <h3>
+              Recent Tweets
+              <small>for "{{TS.stats.query}}"</small>
+            </h3>
+
+            {{#each TS.tweetsC}}
+              <!-- Individual Tweet -->
+              <div class="tweet">
+                <!-- Avatar -->
+                {{#if TS.stats.show_avatars}}
+                  <img  class='avatar' {{bindAttr src="image_url"}} width="48" height="48"  />
+                {{/if}}
+
+                <span class='name'>{{name}}</span>
+                <span class='login'>(@{{login}})</span>
+                <span class='timeago'>{{timeago}}</span>
+                <span class='text'>{{text}}</span>
+              </div>
+            {{/each}}
+
+          {{else}}
+
+            <!-- Welcome text -->
+            <h2><a href="http://thomasklemm.github.com/Two-Thousand-Tweets">2000 Tweets</a></h2>
+
+            <p><b>Welcome</b>. 2000 Tweets is a Twitter search built on Ember and Morris.js. It retrieves the most recent tweets for your search and charts the results over time. You may select and switch the chart's time horizon any time and it updates instantly.</p>
+
+            <h4>Technology</h4>
+
+            <p>2000 Tweets uses <a href="http://emberjs.com/">Ember.js</a> - "A framework for creating ambitious web application" - to display the most recent tweets matching a user's search. Tweets will be quickly downloaded in an asynchronous fashion. A graph displaying the distribution of these tweets over time continuously updates, with the user being able to select among time slices between ten seconds and one hour for counting tweets. The time-series is visualized leveraging <a href="http://www.oesmith.co.uk/morris.js/">Morris.js</a>.</p>
+
+            <h4>About me</h4>
+
+            <p>Hello there, I am <a href="http://tklemm.eu"><b>Thomas Klemm</b></a>. I'm a web developer based in Berlin. If you like this app and would like to share some feedback, feel free to reach out to me at <a href="mailto:github@tklemm.eu">github@tklemm.eu</a>.</p>
+
+            <h4>License</h4>
+
+            <p>MIT</p>
+
+          {{/if}}
+        </div>
+      </script>
+
+    </div>
+
+
+    <!-- Stats -->
+    <div class="four columns">
+      <div class="panel radius">
+
+        <script type="text/x-handlebars">
+          <h5 class='nopad nomarg'>Statistics</h5>
+          <p></p>
+
+          <ul class='disc'>
+            <!-- Stats Quick Glance -->
+            <li>
+              <b>{{TS.tweetsC.tweetsCount}} Tweets</b><br />
+              from <b>{{TS.stats.oldest}}</b><br />
+              to <b>{{TS.stats.newest}}</b>
+            </li>
+
+            <!-- Averages -->
+            <li style='margin-top: 10px'>
+              Average Number of Tweets
+              <ul class='square'>
+                <li><b>{{TS.stats.avg_10_seconds}}</b> per 10 Seconds</li>
+                <li><b>{{TS.stats.avg_minutes}}</b> per Minute</li>
+                <li><b>{{TS.stats.avg_10_minutes}}</b> per 10 Minutes</li>
+                <li><b>{{TS.stats.avg_hours}}</b> per Hour</li>
+              </ul>
+            </li>
+
+            <!-- Peaks -->
+            <li style='margin-top: 10px'>
+              Peak Number of Tweets
+              <ul class='square'>
+                <li><b>{{TS.stats.max_10_seconds}}</b> per 10 Seconds <br/> at {{TS.stats.max_10_seconds_time}}</li>
+                <li><b>{{TS.stats.max_minutes}}</b> per Minute <br/> at {{TS.stats.max_minutes_time}}</li>
+                <li><b>{{TS.stats.max_10_minutes}}</b> per 10 Minutes <br/> at {{TS.stats.max_10_minutes_time}}</li>
+                <li><b>{{TS.stats.max_hours}}</b> per Hour <br/> at {{TS.stats.max_hours_time}}</li>
+              </ul>
+            </li>
+
+          </ul>
+
+          <!-- Show Tweeters' Avatars Checkbox -->
+          {{#view Ember.Checkbox checkedBinding="TS.stats.show_avatars"}}
+            <b>Show Avatars</b> <span style='color: #777'>&middot; Best in Chrome</b>
+          {{/view}}
+        </script>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Fork me Ribbon -->
+  <a href="http://thomasklemm.github.com/Two-Thousand-Tweets"><img style="position: absolute; top: -16px; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+
+  <!-- Javascripts -->
+
+  <!-- jQuery -->
+  <!-- The missing protocol means that it will match the current protocol, either http or https. If running locally, we use the local jQuery. -->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="scripts/libs/775b359b.jquery-1.7.2.min.js"><\/script>')</script>
+  <script src="scripts/libs/7e1f2e7a.moment.js"></script>
+  <script src="scripts/libs/ca4dd7ea.handlebars-1.0.0.beta.6.js"></script>
+  <script src="scripts/libs/05224125.ember-1.0.pre.js"></script>
+  <script src="scripts/libs/8633037d.raphael.js"></script>
+  <script src="scripts/libs/4f1abbae.morris.js"></script>
+  <script src="scripts/aa7130da.app.js"></script>
+</body>
+</html>
