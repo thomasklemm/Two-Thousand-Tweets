@@ -160,7 +160,7 @@ module.exports = function( grunt ) {
     // rjs configuration. You don't necessarily need to specify the typical
     // `path` configuration, the rjs task will parse these values from your
     // main module, using http://requirejs.org/docs/optimization.html#mainConfigFile
-    //
+
     // name / out / mainConfig file should be used. You can let it blank if
     // you're using usemin-handler to parse rjs config from markup (default
     // setup)
