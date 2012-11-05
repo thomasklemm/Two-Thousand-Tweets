@@ -80,17 +80,17 @@ TS.stats = Em.Object.create({
   avg_minutes:    0,
   avg_10_seconds: 0,
 
-  // // Maxima per timeframe
-  // max_hours:      0,
-  // max_10_minutes: 0,
-  // max_minutes:    0,
-  // max_10_seconds: 0,
+  // Maxima per timeframe
+  max_hours:      0,
+  max_10_minutes: 0,
+  max_minutes:    0,
+  max_10_seconds: 0,
 
-  // // Date of maxima per timeframe
-  // max_hours_time:      '-',
-  // max_10_minutes_time: '-',
-  // max_minutes_time:    '-',
-  // max_10_seconds_time: '-',
+  // Date of maxima per timeframe
+  max_hours_time:      '-',
+  max_10_minutes_time: '-',
+  max_minutes_time:    '-',
+  max_10_seconds_time: '-',
 
   // Reset all stats
   // e.g. when new search is being submitted
@@ -109,17 +109,17 @@ TS.stats = Em.Object.create({
     this.set('avg_minutes', 0);
     this.set('avg_10_seconds', 0);
 
-    // // Maxima per timeframe
-    // this.set('max_hours', 0);
-    // this.set('max_10_minutes', 0);
-    // this.set('max_minutes', 0);
-    // this.set('max_10_seconds', 0);
+    // Maxima per timeframe
+    this.set('max_hours', 0);
+    this.set('max_10_minutes', 0);
+    this.set('max_minutes', 0);
+    this.set('max_10_seconds', 0);
 
-    // // Date of maxima
-    // this.set('max_hours_time', '-');
-    // this.set('max_10_minutes_time', '-');
-    // this.set('max_minutes_time', '-');
-    // this.set('max_10_seconds_time', '-');
+    // Date of maxima
+    this.set('max_hours_time', '-');
+    this.set('max_10_minutes_time', '-');
+    this.set('max_minutes_time', '-');
+    this.set('max_10_seconds_time', '-');
   },
 
   // Set current stats from tweet in processing
@@ -246,11 +246,17 @@ TS.tweetsC = Em.ArrayController.create({
   cancelSearch: function() {
     TS.stats.set('searching', false);
 
-    // Cancel graph drawing interval
-    stop_drawing();
+    // Execute graph drawing and stats calculations
+    // after a specified time
+    // to wait until final search round completes
+    setTimeout(function(){
+      // Cancel graph drawing interval
+      stop_drawing();
 
-    // Calculate and set statistics
-    calculate_stats();
+      // Calculate and set statistics
+      calculate_stats();
+    }, 1000);
+
     return;
   },
 
@@ -563,6 +569,9 @@ calculate_stats = function() {
 
     // Calc. and set averages for timeframe
     avg_tweets_stats(timeframe);
+
+    // Calc. and set maxima for timeframe
+    max_tweets_stats(tweets, timeframe);
   };
   return;
 };
@@ -570,12 +579,15 @@ calculate_stats = function() {
 // Set a single value in the TS.stats object
 set_stat = function(key, value) {
   TS.stats.set(key, value);
+  return;
 };
 
+// Calculate and set average tweet counts
+// for a certain timeframe
 avg_tweets_stats = function(timeframe) {
-  var avg = 0;
   var count = TS.tweetsC.get('tweetsCount');
   var range = TS.stats.get('range');
+  var avg = 0;
 
   // Calculate average and round result
   avg = count / (range / timeframe.in_ms);
@@ -584,5 +596,31 @@ avg_tweets_stats = function(timeframe) {
   // Set stats
   var key = "avg_" + timeframe.stats_key;
   set_stat(key, avg);
+  return;
 };
 
+max_tweets_stats = function(tweets, timeframe) {
+  var max = 0;
+  var max_time = '-';
+
+  // Count tweets per timeframe
+  var time_and_counts = tweets_count_per_time(tweets, timeframe);
+
+  // Interate over tweet distribution
+  for (time in time_and_counts) {
+    // Set maximum if count > max
+    var count = time_and_counts[time];
+    if (count > max) {
+      max = count;
+      max_time = time;
+    }
+  }
+
+  // Set stats
+  var key = "max_" + timeframe.stats_key;
+  set_stat(key, max);
+
+  var key_time = "max_" + timeframe.stats_key + "_time";
+  set_stat(key_time, max_time);
+  return;
+}
